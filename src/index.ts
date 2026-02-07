@@ -3,10 +3,9 @@ import { JupiterSwap } from './integrations/jupiter';
 import { KaminoLending } from './integrations/kamino';
 import { MarinadeStaking } from './integrations/marinade';
 import { PythPriceFeed } from './integrations/pyth';
-import { TreasuryManager } from './core/treasury';
+import { TreasuryManager, TreasuryConfig } from './core/treasury';
 import { StrategyEngine } from './core/strategy';
 import { RiskManager } from './core/risk';
-import { Config } from './utils/config';
 
 export class SentienceAgent {
   private rpc: SolanaRPC;
@@ -18,13 +17,13 @@ export class SentienceAgent {
   private strategy: StrategyEngine;
   private risk: RiskManager;
 
-  constructor(config: Config) {
+  constructor(config: TreasuryConfig) {
     this.rpc = new SolanaRPC(config.heliusApiKey);
     this.jupiter = new JupiterSwap();
     this.kamino = new KaminoLending();
     this.marinade = new MarinadeStaking();
     this.pyth = new PythPriceFeed();
-    this.treasury = new TreasuryManager(config.walletKey);
+    this.treasury = new TreasuryManager(config);
     this.strategy = new StrategyEngine();
     this.risk = new RiskManager();
   }

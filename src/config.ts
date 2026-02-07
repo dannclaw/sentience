@@ -1,5 +1,4 @@
-import { Connection, PublicKey } from '@solana/web3.js';
-import { TreasuryConfig } from './types';
+import { Connection } from '@solana/web3.js';
 
 // Token mint addresses
 export const TOKENS = {
@@ -17,6 +16,14 @@ export const HELIUS_CONFIG = {
   mainnet: 'https://mainnet.helius-rpc.com/?api-key=34a81e92-a934-4832-82dc-53117cac9d25',
 };
 
+export interface TreasuryConfig {
+  heliusApiKey: string;
+  walletPrivateKey: string;
+  rpcEndpoint: string;
+  minSolBalance: number;
+  maxSlippageBps: number;
+}
+
 // Load config from environment or use defaults
 export function loadConfig(): TreasuryConfig {
   return {
@@ -31,37 +38,27 @@ export function loadConfig(): TreasuryConfig {
 // Create Helius connection
 export function createHeliusConnection(endpoint?: string): Connection {
   const url = endpoint || HELIUS_CONFIG.devnet;
-  return new Connection(url, {
-    commitment: 'confirmed',
-    wsEndpoint: url.replace('https', 'wss'),
-  });
+  return new Connection(url, 'confirmed');
 }
 
 // Verify Helius connection
 export async function verifyHeliusConnection(connection?: Connection): Promise<{
   healthy: boolean;
-  version: string;
   slot: number;
 }> {
   const conn = connection || createHeliusConnection();
   
   try {
-    const [health, version, slot] = await Promise.all([
-      conn.getHealth(),
-      conn.getVersion(),
-      conn.getSlot(),
-    ]);
+    const slot = await conn.getSlot();
     
     return {
-      healthy: health === 'ok',
-      version: version['solana-core'],
+      healthy: true,
       slot,
     };
   } catch (error) {
     console.error('Helius connection failed:', error);
     return {
       healthy: false,
-      version: 'unknown',
       slot: 0,
     };
   }
