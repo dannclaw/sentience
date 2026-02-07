@@ -6,6 +6,12 @@
 [![Solana](https://img.shields.io/badge/Solana-Devnet-purple)](https://solana.com)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
 
+## 🌐 Live Demo
+
+**Dashboard**: [https://dannclaw.github.io/sentience/dashboard](https://dannclaw.github.io/sentience/dashboard) *(Deploy pending)*
+
+**Project Page**: https://colosseum.com/agent-hackathon/projects/sentience
+
 ## Overview
 
 Sentience is an AI agent that manages a treasury on Solana, autonomously optimizing yields across DeFi protocols. It monitors market conditions, allocates capital, and executes rebalancing strategies — all governed by on-chain risk parameters.
@@ -76,6 +82,15 @@ npm run build
 npm start
 ```
 
+### Dashboard
+
+```bash
+cd dashboard/my-app
+npm install
+npm run dev
+# Open http://localhost:3000
+```
+
 ### Environment Variables
 
 ```env
@@ -103,16 +118,7 @@ REBALANCE_THRESHOLD=0.05
 | **Staking** | Marinade |
 | **Price Feeds** | Pyth |
 | **RPC** | Helius |
-
-## Testing
-
-```bash
-# Run all tests
-npm test
-
-# Run tests in watch mode
-npm run test:watch
-```
+| **Dashboard** | Next.js 15, React 19, Tailwind CSS |
 
 ## Project Structure
 
@@ -129,33 +135,36 @@ sentience/
 │   │   ├── marinade.ts
 │   │   ├── pyth.ts
 │   │   └── helius.ts
-│   ├── utils/          # Utilities
-│   │   └── config.ts
+│   ├── config.ts       # Configuration
 │   ├── __tests__/      # Test suites
 │   ├── index.ts        # Main agent orchestrator
 │   └── main.ts         # Entry point
-├── dashboard/          # Next.js dashboard (optional)
+├── dashboard/          # Next.js dashboard
+│   └── my-app/
+│       ├── app/
+│       │   ├── components/  # Dashboard components
+│       │   ├── page.tsx     # Main dashboard
+│       │   └── globals.css  # Styles
+│       └── README.md
 ├── .env.example
 ├── package.json
 └── tsconfig.json
 ```
 
-## Dashboard
-
-A beautiful web dashboard is included for monitoring:
+## Testing
 
 ```bash
-cd dashboard/my-app
-npm install
-npm run dev
+# Run all tests
+npm test
+
+# Run tests in watch mode
+npm run test:watch
 ```
 
-Features:
-- Real-time portfolio overview
-- Yield analytics charts
-- Risk metrics display
-- Transaction history
-- Strategy status
+## Documentation
+
+- [Dashboard README](./dashboard/README.md)
+- [API Documentation](https://colosseum.com/agent-hackathon/projects/sentience)
 
 ## Roadmap
 
@@ -163,6 +172,7 @@ Features:
 - [x] Protocol integrations
 - [x] Risk management
 - [x] Web dashboard
+- [x] Helius RPC integration
 - [ ] On-chain program (Anchor)
 - [ ] Multi-sig treasury
 - [ ] Advanced ML strategies
