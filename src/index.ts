@@ -1,0 +1,103 @@
+import { SolanaRPC } from './integrations/helius';
+import { JupiterSwap } from './integrations/jupiter';
+import { KaminoLending } from './integrations/kamino';
+import { MarinadeStaking } from './integrations/marinade';
+import { PythPriceFeed } from './integrations/pyth';
+import { TreasuryManager } from './core/treasury';
+import { StrategyEngine } from './core/strategy';
+import { RiskManager } from './core/risk';
+import { Config } from './utils/config';
+
+export class SentienceAgent {
+  private rpc: SolanaRPC;
+  private jupiter: JupiterSwap;
+  private kamino: KaminoLending;
+  private marinade: MarinadeStaking;
+  private pyth: PythPriceFeed;
+  private treasury: TreasuryManager;
+  private strategy: StrategyEngine;
+  private risk: RiskManager;
+
+  constructor(config: Config) {
+    this.rpc = new SolanaRPC(config.heliusApiKey);
+    this.jupiter = new JupiterSwap();
+    this.kamino = new KaminoLending();
+    this.marinade = new MarinadeStaking();
+    this.pyth = new PythPriceFeed();
+    this.treasury = new TreasuryManager(config.walletKey);
+    this.strategy = new StrategyEngine();
+    this.risk = new RiskManager();
+  }
+
+  async initialize(): Promise<void> {
+    console.log('🧠 Initializing Sentience Agent...');
+    
+    // Load current portfolio state
+    await this.treasury.loadState();
+    
+    // Verify wallet connection and balance
+    const balance = await this.treasury.getBalance();
+    console.log(`💰 Treasury Balance: ${balance} SOL`);
+    
+    console.log('✅ Agent initialized');
+  }
+
+  async runStrategyCycle(): Promise<void> {
+    console.log('\n🔄 Running strategy cycle...');
+    
+    // 1. Gather market data
+    const prices = await this.pyth.getPrices(['SOL', 'USDC', 'mSOL']);
+    const yields = await this.kamino.getCurrentYields();
+    const stakingApy = await this.marinade.getStakingApy();
+    
+    // 2. Risk assessment
+    const riskProfile = await this.risk.assessMarketConditions(prices);
+    if (riskProfile.shouldHalt) {
+      console.log('🛑 Risk threshold exceeded. Halting operations.');
+      return;
+    }
+    
+    // 3. Strategy optimization
+    const allocations = this.strategy.optimizeAllocations({
+      prices,
+      yields,
+      stakingApy,
+      riskProfile,
+      currentPortfolio: await this.treasury.getPortfolio()
+    });
+    
+    // 4. Execute rebalancing if needed
+    const rebalanceNeeded = this.strategy.isRebalanceNeeded(
+      allocations,
+      await this.treasury.getPortfolio()
+    );
+    
+    if (rebalanceNeeded) {
+      console.log('📊 Rebalancing required');
+      await this.executeRebalance(allocations);
+    } else {
+      console.log('✅ Portfolio is optimally allocated');
+    }
+  }
+
+  private async executeRebalance(targetAllocations: any): Promise<void> {
+    // Execute swaps via Jupiter
+    // Deposit to Kamino lending
+    // Stake SOL via Marinade
+    console.log('Executing rebalance...');
+  }
+
+  async startHeartbeat(): Promise<void> {
+    // Run strategy cycle every 5 minutes
+    setInterval(async () => {
+      try {
+        await this.runStrategyCycle();
+      } catch (error) {
+        console.error('❌ Strategy cycle error:', error);
+      }
+    }, 5 * 60 * 1000);
+    
+    // Run immediately on start
+    await this.runStrategyCycle();
+  }
+}
