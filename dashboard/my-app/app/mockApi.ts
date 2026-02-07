@@ -43,23 +43,28 @@ const generateTransactions = (): Transaction[] => {
   const assets = ['SOL', 'USDC', 'mSOL', 'JTO', 'BONK'];
   const now = Date.now();
   
-  return [...Array(10)].map((_, i) => {
+  const transactions: Transaction[] = [];
+  
+  for (let i = 0; i < 10; i++) {
     const type = types[Math.floor(Math.random() * types.length)];
     const asset = assets[Math.floor(Math.random() * assets.length)];
     const amount = Math.random() * 1000 + 100;
     const price = asset === 'USDC' ? 1 : Math.random() * 100 + 50;
+    const status: Transaction['status'] = Math.random() > 0.9 ? 'pending' : 'completed';
     
-    return {
+    transactions.push({
       id: `tx-${Date.now()}-${i}`,
       type,
       asset,
       amount: Math.round(amount * 100) / 100,
       valueUsd: Math.round(amount * price * 100) / 100,
       timestamp: now - Math.floor(Math.random() * 7 * 24 * 60 * 60 * 1000),
-      status: Math.random() > 0.9 ? 'pending' : 'completed',
+      status,
       txHash: `0x${[...Array(64)].map(() => Math.floor(Math.random() * 16).toString(16)).join('')}`,
-    };
-  }).sort((a, b) => b.timestamp - a.timestamp);
+    });
+  }
+  
+  return transactions.sort((a, b) => b.timestamp - a.timestamp);
 };
 
 export const mockDashboardData: DashboardData = {
