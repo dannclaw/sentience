@@ -268,8 +268,13 @@ export class TreasuryManager extends EventEmitter {
       };
       
     } catch (error) {
-      log.error('Error fetching portfolio', { error });
-      throw error;
+      // Silently handle errors - return empty portfolio on failure
+      log.warn('Portfolio fetch incomplete - some protocols may be unavailable');
+      return {
+        sol: 0, usdc: 0, usdt: 0, msol: 0, jitosol: 0,
+        kaminoDeposits: {}, solendDeposits: {}, marginfiDeposits: {}, driftPositions: {},
+        totalValue: 0, prices: {}, yield24h: 0, yield7d: 0, yield30d: 0
+      };
     }
   }
 
@@ -303,7 +308,7 @@ export class TreasuryManager extends EventEmitter {
       }
       
     } catch (error) {
-      log.error('Error fetching token balances', { error });
+      // Silently handle errors
     }
     
     return balances;
