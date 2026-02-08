@@ -1,5 +1,5 @@
 import { SentienceAgent } from './index';
-import { loadConfig, validateConfig } from './utils/config';
+import { loadConfig, validateConfig, TreasuryConfig } from './config';
 import * as dotenv from 'dotenv';
 
 // Load environment variables
