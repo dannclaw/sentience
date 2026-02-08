@@ -13,7 +13,7 @@ export class SentienceAgent {
   private kamino: KaminoLending;
   private marinade: MarinadeStaking;
   private pyth: PythPriceFeed;
-  private treasury: TreasuryManager;
+  public treasury: TreasuryManager;
   private strategy: StrategyEngine;
   private risk: RiskManager;
 

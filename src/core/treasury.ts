@@ -659,4 +659,58 @@ export class TreasuryManager extends EventEmitter {
     // Calculate yield breakdown
     return { accrued24h: 0 };
   }
+
+  // API methods for dashboard
+  async getTransactions(): Promise<TransactionRecord[]> {
+    return this.transactionHistory.slice(-50).reverse();
+  }
+
+  async getKaminoPositions(): Promise<any[]> {
+    const positions = await this.kamino.getPositions(this.wallet.publicKey.toString());
+    return Object.entries(positions).map(([key, value]: [string, any]) => ({
+      id: `kamino-${key}`,
+      market: key,
+      type: 'lend',
+      asset: value.token || key,
+      amount: value.amount || 0,
+      valueUsd: value.amount || 0,
+      apy: value.apy || 0,
+    }));
+  }
+
+  async getYieldHistory(): Promise<any[]> {
+    // Generate mock yield history for now
+    const data: any[] = [];
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    let totalYield = 0;
+    let solYield = 0;
+    let usdcYield = 0;
+    let msolYield = 0;
+    let kaminoYield = 0;
+    
+    for (let i = 30; i >= 0; i--) {
+      const timestamp = now - i * dayMs;
+      const date = new Date(timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      
+      solYield += Math.random() * 50 + 20;
+      usdcYield += Math.random() * 80 + 40;
+      msolYield += Math.random() * 40 + 15;
+      kaminoYield += Math.random() * 120 + 60;
+      totalYield = solYield + usdcYield + msolYield + kaminoYield;
+      
+      data.push({
+        timestamp,
+        date,
+        totalYield: Math.round(totalYield * 100) / 100,
+        solYield: Math.round(solYield * 100) / 100,
+        usdcYield: Math.round(usdcYield * 100) / 100,
+        msolYield: Math.round(msolYield * 100) / 100,
+        kaminoYield: Math.round(kaminoYield * 100) / 100,
+      });
+    }
+    
+    return data;
+  }
 }
