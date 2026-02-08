@@ -1,5 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { Connection, VersionedTransaction } from '@solana/web3.js';
+import { Connection, PublicKey, Keypair, Transaction, sendAndConfirmTransaction, ComputeBudgetProgram, VersionedTransaction } from '@solana/web3.js';
 import axios from 'axios';
 
 export interface BundleResult {
@@ -9,9 +8,7 @@ export interface BundleResult {
   landingSlot?: number;
 }
 
-@Injectable()
 export class JitoMev {
-  private readonly logger = new Logger(JitoMev.name);
   private readonly jitoEndpoints = [
     'https://mainnet.block-engine.jito.wtf/api/v1',
     'https://amsterdam.mainnet.block-engine.jito.wtf/api/v1',
@@ -25,12 +22,10 @@ export class JitoMev {
     tipLamports: number = 10000
   ): Promise<BundleResult> {
     try {
-      // Serialize transactions
       const serializedTxs = transactions.map(tx => 
         Buffer.from(tx.serialize()).toString('base64')
       );
 
-      // Send to Jito
       const response = await axios.post(
         `${this.jitoEndpoints[0]}/bundles`,
         {
@@ -43,10 +38,8 @@ export class JitoMev {
       );
 
       const bundleId = response.data.result;
-      
-      this.logger.log(`Bundle sent: ${bundleId}`);
+      console.log(`Bundle sent: ${bundleId}`);
 
-      // Wait for confirmation
       const status = await this.waitForBundleConfirmation(bundleId);
 
       return {
@@ -59,7 +52,7 @@ export class JitoMev {
       };
 
     } catch (error) {
-      this.logger.error('Bundle submission failed', error);
+      console.error('Bundle submission failed', error);
       throw error;
     }
   }
@@ -78,7 +71,6 @@ export class JitoMev {
 
       return response.data.result || [];
     } catch {
-      // Fallback tip accounts
       return [
         '96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5',
         'HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe',
@@ -87,7 +79,6 @@ export class JitoMev {
   }
 
   async getApy(): Promise<number> {
-    // JitoSOL staking APY
     return 7.2;
   }
 
@@ -117,7 +108,7 @@ export class JitoMev {
 
         await new Promise(r => setTimeout(r, 2000));
       } catch (error) {
-        this.logger.warn('Bundle status check failed', error);
+        console.warn('Bundle status check failed', error);
       }
     }
 

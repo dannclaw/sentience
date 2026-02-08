@@ -37,9 +37,9 @@ export interface TreasuryConfig {
   rpcEndpoint: string;
   minSolBalance: number;
   maxSlippageBps: number;
-  jitoEnabled: boolean;
-  autoCompound: boolean;
-  riskLevel: 'conservative' | 'moderate' | 'aggressive';
+  jitoEnabled?: boolean;
+  autoCompound?: boolean;
+  riskLevel?: 'conservative' | 'moderate' | 'aggressive';
 }
 
 export interface TransactionRecord {
@@ -150,6 +150,11 @@ export class TreasuryManager extends EventEmitter {
       log.error('Treasury initialization failed', { error });
       throw error;
     }
+  }
+
+  async loadState(): Promise<void> {
+    log.info('Loading treasury state...');
+    // Load any persisted state here
   }
 
   startAutoRebalance(intervalMinutes: number = 60): void {

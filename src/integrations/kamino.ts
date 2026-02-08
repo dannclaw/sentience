@@ -108,4 +108,22 @@ export class KaminoLending {
     console.log(`Fetching deposits for ${userPublicKey}`);
     return {};
   }
+
+  // Additional methods needed by TreasuryManager
+  async getPositions(wallet: string | any): Promise<Record<string, any>> {
+    console.log(`Fetching Kamino positions for ${wallet}`);
+    return {};
+  }
+
+  async claimAll(wallet: any): Promise<{ total: number; breakdown: any[] }> {
+    console.log('Claiming all Kamino yields');
+    return { total: 0, breakdown: [] };
+  }
+
+  async getApy(): Promise<number> {
+    const yields = await this.getCurrentYields();
+    // Return average APY
+    const values = Object.values(yields);
+    return values.reduce((a, b) => a + b, 0) / values.length;
+  }
 }

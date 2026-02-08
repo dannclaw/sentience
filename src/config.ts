@@ -63,6 +63,9 @@ export interface TreasuryConfig {
   network: Cluster;
   minSolBalance: number;
   maxSlippageBps: number;
+  jitoEnabled?: boolean;
+  autoCompound?: boolean;
+  riskLevel?: 'conservative' | 'moderate' | 'aggressive';
   riskParams: {
     maxPositionSize: number;
     maxVolatility: number;
@@ -190,5 +193,5 @@ export async function checkHealth(connection: Connection): Promise<{
   }
 }
 
-// Export environment helpers
-export { ENV, NETWORK, RPC_ENDPOINTS, TOKENS, JUPITER_CONFIG, PROTOCOLS };
+// Export environment helpers - these are already exported above
+// No need for duplicate exports

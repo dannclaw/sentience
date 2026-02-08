@@ -98,4 +98,9 @@ export class MarinadeStaking {
     console.log(`Checking unstake ticket ${ticketAddress}`);
     return null;
   }
+
+  // Alias for getStakingApy for compatibility
+  async getApy(): Promise<number> {
+    return this.getStakingApy();
+  }
 }
