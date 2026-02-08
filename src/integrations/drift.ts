@@ -84,8 +84,12 @@ export class DriftIntegration {
         }
       }
       return positions;
-    } catch (error) {
-      console.error(`Failed to fetch Drift positions for ${wallet.toString()}`, error);
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        // No positions exist yet - return empty
+        return {};
+      }
+      console.error(`Failed to fetch Drift positions for ${wallet.toString()}`, error.message);
       return {};
     }
   }
