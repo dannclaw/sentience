@@ -113,14 +113,14 @@ export class TreasuryManager extends EventEmitter {
     // Initialize integrations
     this.jupiter = new JupiterSwap();
     this.kamino = new KaminoLending();
-    this.solend = new SolendLending();
-    this.marginfi = new MarginfiLending();
+    this.solend = new SolendLending(this.connection);
+    this.marginfi = new MarginfiLending(this.connection);
     this.marinade = new MarinadeStaking();
-    this.drift = new DriftIntegration();
+    this.drift = new DriftIntegration(this.connection);
     this.jito = new JitoMev(config.heliusApiKey);
     this.pyth = new PythPriceFeed();
-    this.risk = new RiskManager(config.riskLevel);
-    this.strategy = new StrategyEngine(config.riskLevel);
+    this.risk = new RiskManager();
+    this.strategy = new StrategyEngine();
   }
 
   async initialize(): Promise<void> {
@@ -240,8 +240,8 @@ export class TreasuryManager extends EventEmitter {
       let marginfiValue = 0;
       const marginfiDeposits: Record<string, number> = {};
       for (const [pool, position] of Object.entries(marginfiPositions)) {
-        marginfiDeposits[pool] = position.amount;
-        marginfiValue += position.amount * (prices[pool] || 1);
+        marginfiDeposits[pool] = position.deposited;
+        marginfiValue += position.deposited * (prices[pool] || 1);
       }
       
       const totalValue = solValue + usdcValue + usdtValue + msolValue + jitosolValue + 
@@ -550,7 +550,7 @@ export class TreasuryManager extends EventEmitter {
     
     try {
       // Claim from each protocol
-      const kaminoYields = await this.kamino.claimAll(this.wallet);
+      const kaminoYields = await this.kamino.claimAll();
       const solendYields = await this.solend.claimAll(this.wallet);
       const marginfiYields = await this.marginfi.claimAll(this.wallet);
       

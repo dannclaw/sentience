@@ -153,6 +153,28 @@ export class JupiterSwap {
     }
   }
 
+  // Get swap transaction (serialization for execution)
+  async getSwapTransaction(
+    quote: SwapQuote,
+    userPublicKey: string
+  ): Promise<{ swapTransaction: string }> {
+    try {
+      const swapResponse = await axios.post(`${JUPITER_V6_API}/swap`, {
+        quoteResponse: quote,
+        userPublicKey,
+        wrapAndUnwrapSol: true,
+        prioritizationFeeLamports: 10000
+      });
+
+      return {
+        swapTransaction: swapResponse.data.swapTransaction
+      };
+    } catch (error) {
+      console.error('Error getting swap transaction:', error);
+      throw error;
+    }
+  }
+
   async getRouteInfo(): Promise<any> {
     try {
       const response = await axios.get(`${JUPITER_V6_API}/route-map`);

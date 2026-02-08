@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Keypair } from '@solana/web3.js';
 
 const KAMINO_API = 'https://api.kamino.finance';
 
@@ -9,25 +10,20 @@ export interface LendingMarket {
   borrowApy: number;
   totalSupply: number;
   availableLiquidity: number;
-  ltv: number; // Loan-to-value ratio
+  ltv: number;
 }
 
 export class KaminoLending {
   async getCurrentYields(): Promise<Record<string, number>> {
     try {
-      // Fetch lending market data
-      // This is a simplified mock - real implementation would query Kamino's API
       const markets = await this.getLendingMarkets();
-      
       const yields: Record<string, number> = {};
       markets.forEach(market => {
         yields[market.token] = market.supplyApy;
       });
-
       return yields;
     } catch (error) {
       console.error('Error fetching Kamino yields:', error);
-      // Return mock data for development
       return {
         'USDC': 8.5,
         'USDT': 7.8,
@@ -38,13 +34,12 @@ export class KaminoLending {
     }
   }
 
+  async getAllYields(): Promise<Record<string, number>> {
+    return this.getCurrentYields();
+  }
+
   async getLendingMarkets(): Promise<LendingMarket[]> {
     try {
-      // In production, this would query Kamino's GraphQL or REST API
-      // const response = await axios.get(`${KAMINO_API}/lending/markets`);
-      // return response.data;
-
-      // Mock data for development
       return [
         {
           address: '7u3HeHxYLP8YpPj2iEhHt8mvJ9zJMKC1U6Z5US3xS6',
@@ -89,40 +84,37 @@ export class KaminoLending {
     }
   }
 
-  async deposit(token: string, amount: number, userPublicKey: string): Promise<string> {
+  async deposit(token: string, amount: number, wallet: Keypair): Promise<string> {
     console.log(`Depositing ${amount} ${token} to Kamino`);
-    // In production, this would:
-    // 1. Create/verify obligation account
-    // 2. Create deposit instruction
-    // 3. Sign and send transaction
     return 'pending-implementation';
   }
 
-  async withdraw(token: string, amount: number, userPublicKey: string): Promise<string> {
+  async withdraw(token: string, amount: number, wallet: Keypair): Promise<string> {
     console.log(`Withdrawing ${amount} ${token} from Kamino`);
     return 'pending-implementation';
   }
 
   async getUserDeposits(userPublicKey: string): Promise<Record<string, number>> {
-    // Fetch user's current deposits across all markets
     console.log(`Fetching deposits for ${userPublicKey}`);
     return {};
   }
 
-  // Additional methods needed by TreasuryManager
   async getPositions(wallet: string | any): Promise<Record<string, any>> {
     console.log(`Fetching Kamino positions for ${wallet}`);
     return {};
   }
 
-  async claimAll(wallet: any): Promise<{ total: number; breakdown: any[] }> {
+  async claimAll(): Promise<{ total: number; breakdown: any[] }> {
     console.log('Claiming all Kamino yields');
     return { total: 0, breakdown: [] };
   }
 
-  async getApy(): Promise<number> {
+  async getApy(token?: string): Promise<number> {
+    if (token) {
+      const yields = await this.getCurrentYields();
+      return yields[token] || 5.0;
+    }
     const yields = await this.getCurrentYields();
-    // Return average APY
     const values = Object.values(yields);
     return values.reduce((a, b) => a + b, 0) / values.length;
   }

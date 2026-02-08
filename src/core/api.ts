@@ -100,6 +100,13 @@ export class SentienceAPI {
   async getRecommendation(
     portfolio: {
       assets: Record<string, number>;
+      kaminoDeposits?: Record<string, number>;
+      solendDeposits?: Record<string, number>;
+      marginfiDeposits?: Record<string, number>;
+      driftPositions?: Record<string, any>;
+      yield24h?: number;
+      yield7d?: number;
+      yield30d?: number;
       riskTolerance: number;
     }
   ): Promise<{
@@ -126,10 +133,18 @@ export class SentienceAPI {
       currentPortfolio: {
         sol: portfolio.assets['SOL'] || 0,
         usdc: portfolio.assets['USDC'] || 0,
+        usdt: portfolio.assets['USDT'] || 0,
         msol: portfolio.assets['mSOL'] || 0,
-        kaminoDeposits: {},
+        jitosol: portfolio.assets['JITOSOL'] || 0,
+        kaminoDeposits: portfolio.kaminoDeposits || {},
+        solendDeposits: portfolio.solendDeposits || {},
+        marginfiDeposits: portfolio.marginfiDeposits || {},
+        driftPositions: portfolio.driftPositions || {},
         totalValue: Object.values(portfolio.assets).reduce((a, b) => a + b, 0),
         prices,
+        yield24h: portfolio.yield24h || 0,
+        yield7d: portfolio.yield7d || 0,
+        yield30d: portfolio.yield30d || 0,
       },
     };
 

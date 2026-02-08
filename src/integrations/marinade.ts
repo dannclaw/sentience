@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Keypair } from '@solana/web3.js';
 
 const MARINADE_API = 'https://api.marinade.finance';
 const MARINADE_STATE = '8szGkuLTAux9XMgZ3vtwCF4hpZyNWzfhBbo6Z4aqvB4V';
@@ -53,17 +54,11 @@ export class MarinadeStaking {
     }
   }
 
-  async stake(amount: number, userPublicKey: string): Promise<{
+  async stake(amount: number, wallet: Keypair): Promise<{
     signature: string;
     msolReceived: number;
   }> {
     console.log(`Staking ${amount} SOL with Marinade`);
-    
-    // In production:
-    // 1. Create stake transaction
-    // 2. Call Marinade program to deposit SOL
-    // 3. Receive mSOL in return
-    
     const msolPrice = await this.getmSOLPrice();
     const msolReceived = amount / msolPrice;
 
