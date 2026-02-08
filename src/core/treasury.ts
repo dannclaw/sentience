@@ -400,6 +400,16 @@ export class TreasuryManager extends EventEmitter {
     }
   }
 
+  // Alias for executeSwap to match API expectations
+  async swap(
+    inputMint: string, 
+    outputMint: string, 
+    amount: number,
+    useMevProtection: boolean = true
+  ): Promise<{ signature: string; outputAmount: number; price: number; gasCost: number }> {
+    return this.executeSwap(inputMint, outputMint, amount, useMevProtection);
+  }
+
   async depositToProtocol(
     protocol: 'kamino' | 'solend' | 'marginfi',
     token: string, 
