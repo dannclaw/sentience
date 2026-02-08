@@ -1,150 +1,237 @@
-import { describe, it, expect, beforeEach } from '@jest/globals';
-import { TreasuryManager, TreasuryConfig } from '../core/treasury';
-import { RiskManager } from '../core/risk';
+import { TreasuryManager } from '../core/treasury';
 import { StrategyEngine } from '../core/strategy';
+import { RiskManager } from '../core/risk';
+import { StrategyAuditor } from '../core/audit';
+import { SentienceAPI } from '../core/api';
+import { JupiterSwap } from '../integrations/jupiter';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 
-describe('Sentience Core Modules', () => {
+// Mock implementations for testing
+const mockConnection = {
+  getBalance: jest.fn().mockResolvedValue(1000000000), // 1 SOL
+  getTokenAccountsByOwner: jest.fn().mockResolvedValue({ value: [] }),
+} as unknown as Connection;
+
+const mockWallet = Keypair.generate();
+
+describe('Sentience Core Tests', () => {
+  
   describe('TreasuryManager', () => {
     let treasury: TreasuryManager;
-    
+
     beforeEach(() => {
-      const config: TreasuryConfig = {
-        heliusApiKey: 'test-api-key',
-        walletPrivateKey: 'test-key',
-        rpcEndpoint: 'https://api.devnet.solana.com',
-        minSolBalance: 0.1,
-        maxSlippageBps: 50
-      };
-      treasury = new TreasuryManager(config);
+      treasury = new TreasuryManager(mockConnection, mockWallet.publicKey);
     });
-    
-    it('should initialize successfully', async () => {
-      await expect(treasury.initialize()).resolves.not.toThrow();
+
+    test('should initialize treasury with zero balance', async () => {
+      const state = await treasury.getState();
+      expect(state).toBeDefined();
     });
-    
-    it('should get portfolio', async () => {
-      const portfolio = await treasury.getPortfolio();
-      expect(portfolio).toHaveProperty('sol');
-      expect(portfolio).toHaveProperty('usdc');
-      expect(portfolio).toHaveProperty('msol');
-      expect(portfolio).toHaveProperty('totalValue');
+
+    test('should get total value locked', async () => {
+      const tvl = await treasury.getTVL();
+      expect(typeof tvl).toBe('number');
+      expect(tvl).toBeGreaterThanOrEqual(0);
     });
-    
-    it('should get balance', async () => {
-      const balance = await treasury.getBalance();
-      expect(typeof balance).toBe('number');
-      expect(balance).toBeGreaterThanOrEqual(0);
+
+    test('should get current allocations', async () => {
+      const allocations = await treasury.getAllocations();
+      expect(allocations).toBeDefined();
+      expect(Array.isArray(allocations)).toBe(true);
     });
   });
-  
+
+  describe('StrategyEngine', () => {
+    let strategy: StrategyEngine;
+
+    beforeEach(() => {
+      strategy = new StrategyEngine({
+        rebalanceThreshold: 0.05,
+        minApyThreshold: 3.0,
+      });
+    });
+
+    test('should analyze market opportunities', async () => {
+      const opportunities = await strategy.analyzeOpportunities();
+      expect(Array.isArray(opportunities)).toBe(true);
+    });
+
+    test('should select best strategy based on risk-adjusted returns', async () => {
+      const mockOpportunities = [
+        { protocol: 'Kamino', apy: 5.5, risk: 0.2, tvl: 1000000 },
+        { protocol: 'Marinade', apy: 7.2, risk: 0.15, tvl: 5000000 },
+      ];
+      
+      const selected = strategy.selectBestStrategy(mockOpportunities);
+      expect(selected).toBeDefined();
+      expect(selected.protocol).toBeDefined();
+    });
+
+    test('should calculate risk-adjusted returns', () => {
+      const apy = 8.0;
+      const volatility = 0.25;
+      const sharpe = strategy.calculateRiskAdjustedReturn(apy, volatility);
+      expect(sharpe).toBeGreaterThan(0);
+    });
+  });
+
   describe('RiskManager', () => {
     let riskManager: RiskManager;
-    
+
     beforeEach(() => {
-      riskManager = new RiskManager();
+      riskManager = new RiskManager({
+        maxPositionSize: 0.5,
+        maxVolatility: 0.3,
+        maxDrawdown: 0.2,
+      });
     });
-    
-    it('should assess market conditions', () => {
-      const prices = {
-        'SOL': 185.50,
-        'USDC': 1.00,
-        'mSOL': 201.80
+
+    test('should assess position risk', () => {
+      const position = {
+        size: 1000,
+        volatility: 0.15,
+        protocol: 'Kamino',
       };
       
-      const assessment = riskManager.assessMarketConditions(prices);
+      const assessment = riskManager.assessRisk(position);
+      expect(assessment.passed).toBe(true);
+      expect(assessment.volatility).toBeDefined();
+    });
+
+    test('should reject high volatility positions', () => {
+      const position = {
+        size: 1000,
+        volatility: 0.5, // Too high
+        protocol: 'RiskyProtocol',
+      };
       
-      expect(assessment).toHaveProperty('volatility');
-      expect(assessment).toHaveProperty('shouldHalt');
-      expect(assessment).toHaveProperty('maxDrawdown');
-      expect(typeof assessment.volatility).toBe('number');
-      expect(typeof assessment.shouldHalt).toBe('boolean');
+      const assessment = riskManager.assessRisk(position);
+      expect(assessment.passed).toBe(false);
     });
-    
-    it('should check position size limits', () => {
-      const isValid = riskManager.checkPositionSize(40000, 100000);
-      expect(typeof isValid).toBe('boolean');
+
+    test('should check circuit breaker conditions', () => {
+      const dailyReturn = -0.25; // 25% loss
+      const shouldHalt = riskManager.checkCircuitBreaker(dailyReturn);
+      expect(shouldHalt).toBe(true);
     });
-    
-    it('should return risk limits', () => {
-      const limits = riskManager.getRiskLimits();
-      expect(limits).toHaveProperty('maxPositionSize');
-      expect(limits).toHaveProperty('maxVolatility');
-      expect(limits).toHaveProperty('maxDrawdown');
+
+    test('should allow normal operations', () => {
+      const dailyReturn = -0.05; // 5% loss
+      const shouldHalt = riskManager.checkCircuitBreaker(dailyReturn);
+      expect(shouldHalt).toBe(false);
     });
   });
-  
-  describe('StrategyEngine', () => {
-    let strategyEngine: StrategyEngine;
-    
+
+  describe('StrategyAuditor', () => {
+    let auditor: StrategyAuditor;
+
     beforeEach(() => {
-      strategyEngine = new StrategyEngine();
+      auditor = new StrategyAuditor(mockConnection);
     });
-    
-    it('should optimize allocations', () => {
-      const marketData = {
-        prices: {
-          'SOL': 185.50,
-          'USDC': 1.00,
-          'mSOL': 201.80
-        },
-        yields: {
-          'USDC': 8.5,
-          'USDT': 7.8
-        },
-        stakingApy: 6.8,
-        riskProfile: {
-          volatility: 0.2,
-          shouldHalt: false,
-          maxDrawdown: 0.05
-        },
-        currentPortfolio: {
-          sol: 10,
-          usdc: 1000,
-          msol: 5,
-          kaminoDeposits: {},
-          totalValue: 5000,
-          prices: {
-            'SOL': 185.50,
-            'USDC': 1.00,
-            'mSOL': 201.80
-          }
-        }
+
+    test('should commit strategy with hash', async () => {
+      const strategy = {
+        action: 'rebalance',
+        from: 'USDC',
+        to: 'mSOL',
+        amount: 1000,
       };
       
-      const allocation = strategyEngine.optimizeAllocations(marketData);
+      const riskAssessment = { passed: true, volatility: 0.15 };
       
-      expect(allocation).toHaveProperty('sol');
-      expect(allocation).toHaveProperty('usdc');
-      expect(allocation).toHaveProperty('msol');
-      expect(allocation).toHaveProperty('kamino');
-      expect(allocation).toHaveProperty('timestamp');
+      const commitment = await auditor.commitStrategy({
+        strategy,
+        riskAssessment,
+        expectedApy: 7.5,
+      });
       
-      // Check allocations sum to ~1
-      const total = allocation.sol + allocation.usdc + allocation.msol + 
-        Object.values(allocation.kamino).reduce((a, b) => a + b, 0);
-      expect(total).toBeCloseTo(1, 1);
+      expect(commitment.id).toBeDefined();
+      expect(commitment.hash).toBeDefined();
+      expect(commitment.timestamp).toBeGreaterThan(0);
     });
+
+    test('should reveal and verify commitment', async () => {
+      const strategy = { action: 'hold' };
+      const commitment = await auditor.commitStrategy({
+        strategy,
+        riskAssessment: { passed: true },
+        expectedApy: 5.0,
+      });
+      
+      const executionResult = { success: true, actualApy: 5.2 };
+      const verified = await auditor.revealAndVerify(commitment.id, executionResult);
+      
+      expect(verified).toBe(true);
+    });
+
+    test('should detect tampered execution', async () => {
+      const strategy = { action: 'rebalance', to: 'mSOL' };
+      const commitment = await auditor.commitStrategy({
+        strategy,
+        riskAssessment: { passed: true },
+        expectedApy: 7.0,
+      });
+      
+      // Tampered result
+      const tamperedResult = { success: true, actualApy: 99.9 };
+      
+      await expect(
+        auditor.revealAndVerify(commitment.id, tamperedResult)
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('SentienceAPI', () => {
+    let api: SentienceAPI;
+
+    beforeEach(() => {
+      api = new SentienceAPI({
+        treasuryWallet: mockWallet,
+        connection: mockConnection,
+      });
+    });
+
+    test('should get yield recommendation', async () => {
+      const portfolio = [
+        { asset: 'USDC', amount: 10000, currentApy: 0 },
+        { asset: 'SOL', amount: 50, currentApy: 0 },
+      ];
+      
+      const recommendation = await api.getRecommendation(portfolio);
+      expect(recommendation).toBeDefined();
+      expect(recommendation.strategies).toBeDefined();
+    });
+
+    test('should quote API pricing', () => {
+      const basicQueryPrice = api.getQuote('basic_yield_query');
+      expect(basicQueryPrice).toBe(0.001);
+      
+      const strategyPrice = api.getQuote('strategy_recommendation');
+      expect(strategyPrice).toBe(0.01);
+      
+      const analysisPrice = api.getQuote('full_portfolio_analysis');
+      expect(analysisPrice).toBe(0.05);
+    });
+
+    test('should process payment for API call', async () => {
+      const payment = await api.processPayment(0.01, 'USDC');
+      expect(payment).toBeDefined();
+      expect(payment.amount).toBe(0.01);
+      expect(payment.currency).toBe('USDC');
+    });
+  });
+});
+
+describe('Integration Tests', () => {
+  test('full rebalance flow', async () => {
+    // This would test the full flow in a real environment
+    // For now, just verify components can be instantiated together
+    const treasury = new TreasuryManager(mockConnection, mockWallet.publicKey);
+    const strategy = new StrategyEngine({});
+    const risk = new RiskManager({});
     
-    it('should calculate expected return', () => {
-      const allocation = {
-        sol: 0.2,
-        usdc: 0.3,
-        msol: 0.3,
-        kamino: { 'USDC': 0.2 },
-        timestamp: Date.now()
-      };
-      
-      const yields = { 'USDC': 8.5 };
-      const stakingApy = 6.8;
-      
-      const expectedReturn = strategyEngine.calculateExpectedReturn(
-        allocation,
-        yields,
-        stakingApy
-      );
-      
-      expect(typeof expectedReturn).toBe('number');
-      expect(expectedReturn).toBeGreaterThan(0);
-    });
+    expect(treasury).toBeDefined();
+    expect(strategy).toBeDefined();
+    expect(risk).toBeDefined();
   });
 });

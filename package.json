@@ -7,10 +7,17 @@
     "build": "tsc",
     "start": "node dist/main.js",
     "dev": "ts-node src/main.ts",
+    "demo": "ts-node src/demo-features.ts",
     "test": "jest",
     "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "test:manual:jupiter": "ts-node src/__tests__/manual/jupiter.test.ts",
+    "test:manual:kamino": "ts-node src/__tests__/manual/kamino.test.ts",
+    "test:manual:rebalance": "ts-node src/__tests__/manual/rebalance.test.ts",
+    "dashboard": "cd dashboard/my-app && npm run dev",
     "lint": "eslint src/**/*.ts",
-    "format": "prettier --write src/**/*.ts"
+    "format": "prettier --write src/**/*.ts",
+    "clean": "rm -rf dist"
   },
   "dependencies": {
     "@solana/kit": "^2.0.0",
