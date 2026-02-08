@@ -85,11 +85,7 @@ export class DriftIntegration {
       }
       return positions;
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        // No positions exist yet - return empty
-        return {};
-      }
-      console.error(`Failed to fetch Drift positions for ${wallet.toString()}`, error.message);
+      // Silently return empty positions - wallet has no Drift account
       return {};
     }
   }

@@ -69,11 +69,8 @@ export class MarginfiLending {
       }
       return positions;
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        // No account exists yet - return empty positions
-        return {};
-      }
-      console.error(`Failed to fetch Marginfi positions for ${wallet.toString()}`, error.message);
+      // Silently return empty positions for any error (404, 400, network, etc.)
+      // User hasn't created a Marginfi account yet
       return {};
     }
   }

@@ -70,11 +70,7 @@ export class SolendLending {
       }
       return positions;
     } catch (error: any) {
-      if (error.response?.status === 404) {
-        // No obligation account exists yet - return empty positions
-        return {};
-      }
-      console.error(`Failed to fetch Solend positions for ${wallet.toString()}`, error.message);
+      // Silently return empty positions - wallet has no Solend obligation account
       return {};
     }
   }
