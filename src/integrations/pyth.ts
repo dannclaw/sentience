@@ -35,6 +35,7 @@ export class PythPriceFeed {
     'USDC': 1.00,
     'USDT': 1.00,
     'mSOL': 201.80,
+    'JitoSOL': 186.20,
     'BONK': 0.000015,
     'JUP': 0.85,
     'BTC': 67500.00,
