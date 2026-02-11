@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, createContext, useContext } from 'react';
+import { useState, useEffect } from 'react';
+import { useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { 
   Wallet, 
   TrendingUp, 
   Shield, 
   Activity,
   Play,
-  Pause,
   RotateCcw,
   CheckCircle2,
   Terminal,
@@ -19,24 +20,12 @@ import {
   ArrowRight,
   ChevronRight,
   LogOut,
-  User
+  Wallet as WalletIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Wallet Context
-interface WalletContextType {
-  connected: boolean;
-  publicKey: string | null;
-  connect: () => void;
-  disconnect: () => void;
-}
-
-const WalletContext = createContext<WalletContextType>({
-  connected: false,
-  publicKey: null,
-  connect: () => {},
-  disconnect: () => {}
-});
+// Import wallet adapter CSS
+import '@solana/wallet-adapter-react-ui/styles.css';
 
 // Mock data
 const agentTesters = [
@@ -95,43 +84,128 @@ const portfolioData = {
   ]
 };
 
-// Wallet Provider Component
-function WalletProvider({ children }: { children: React.ReactNode }) {
-  const [connected, setConnected] = useState(false);
-  const [publicKey, setPublicKey] = useState<string | null>(null);
+// Wallet Button Component
+function WalletButton() {
+  const { connected, publicKey, disconnect } = useWallet();
+  const { connection } = useConnection();
+  const [balance, setBalance] = useState<number | null>(null);
+  const [showDropdown, setShowDropdown] = useState(false);
 
-  const connect = () => {
-    // In production: Use @solana/wallet-adapter
-    // For now: Mock connection
-    setConnected(true);
-    setPublicKey('7xKx...8X2p');
+  useEffect(() => {
+    if (connected && publicKey) {
+      connection.getBalance(publicKey).then((lamports) => {
+        setBalance(lamports / 1e9);
+      });
+    }
+  }, [connected, publicKey, connection]);
+
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
 
-  const disconnect = () => {
-    setConnected(false);
-    setPublicKey(null);
-  };
+  if (!connected) {
+    return (
+      <div className="wallet-adapter-dropdown">
+        <WalletMultiButton 
+          className="!bg-cyan-400 !text-black !font-bold !px-6 !py-3 !rounded-xl !hover:bg-cyan-300 !transition-all !h-auto !text-sm"
+        />
+      </div>
+    );
+  }
 
   return (
-    <WalletContext.Provider value={{ connected, publicKey, connect, disconnect }}>
-      {children}
-    </WalletContext.Provider>
+    <div className="relative">
+      <motion.button
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+        onClick={() => setShowDropdown(!showDropdown)}
+        className="flex items-center gap-3 px-4 py-3 bg-white/5 border border-white/10 rounded-xl hover:bg-white/10 transition-all"
+      >
+        <div className="flex flex-col items-start">
+          <span className="text-sm font-semibold">{publicKey ? formatAddress(publicKey.toString()) : 'Connected'}</span>
+          {balance !== null && (
+            <span className="text-xs text-gray-500">{balance.toFixed(4)} SOL</span>
+          )}
+        </div>
+        <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${showDropdown ? 'rotate-90' : ''}`} />
+      </motion.button>
+
+      <AnimatePresence>
+        {showDropdown && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="absolute right-0 mt-2 w-64 bg-[#0a0a0f] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50"
+          >
+            <div className="p-4 border-b border-white/10">
+              <p className="text-xs text-gray-500 mb-1">Wallet Address</p>
+              <p className="text-sm font-mono break-all">{publicKey?.toString()}</p>
+              {balance !== null && (
+                <>
+                  <p className="text-xs text-gray-500 mt-2 mb-1">Balance</p>
+                  <p className="text-sm font-bold text-cyan-400">{balance.toFixed(4)} SOL</p>
+                </>
+              )}
+            </div>
+            
+            <button
+              onClick={() => {
+                disconnect();
+                setShowDropdown(false);
+              }}
+              className="w-full px-4 py-3 flex items-center gap-2 text-red-400 hover:bg-red-400/10 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Disconnect
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
 
-// Hook for wallet
-function useWallet() {
-  return useContext(WalletContext);
+// Mobile Wallet Button
+function MobileWalletButton({ onClose }: { onClose: () => void }) {
+  const { connected, publicKey, disconnect } = useWallet();
+
+  if (!connected) {
+    return (
+      <WalletMultiButton 
+        className="!w-full !bg-cyan-400 !text-black !font-bold !px-6 !py-4 !rounded-xl !hover:bg-cyan-300 !transition-all !h-auto"
+        onClick={onClose}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="p-4 bg-white/5 rounded-xl">
+        <p className="text-xs text-gray-500 mb-1">Connected Wallet</p>
+        <p className="text-sm font-mono break-all">{publicKey?.toString()}</p>
+      </div>
+      
+      <button 
+        onClick={() => {
+          disconnect();
+          onClose();
+        }}
+        className="w-full py-4 bg-red-400/20 text-red-400 font-bold rounded-xl flex items-center justify-center gap-2"
+      >
+        <LogOut className="w-5 h-5" /> Disconnect Wallet
+      </button>
+    </div>
+  );
 }
 
-// Main Dashboard Component
-function DashboardContent() {
+export default function Dashboard() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
   const [selectedAgent, setSelectedAgent] = useState(agentTesters[0]);
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationProgress, setSimulationProgress] = useState(0);
-  const { connected, publicKey, connect, disconnect } = useWallet();
+  const { connected, publicKey } = useWallet();
 
   useEffect(() => {
     if (isSimulating) {
@@ -148,13 +222,12 @@ function DashboardContent() {
     }
   }, [isSimulating]);
 
-  // Render different sections based on activeSection
+  // Render different sections
   const renderSection = () => {
     switch (activeSection) {
       case 'overview':
         return (
           <>
-            {/* Hero Stats */}
             <section className="py-8">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard label="Total Value" value={`$${portfolioData.totalValue.toLocaleString()}`} change="+5.2%" changeType="positive" icon={Wallet} />
@@ -163,9 +236,7 @@ function DashboardContent() {
               </div>
             </section>
 
-            {/* Main Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-12">
-              {/* Agents Panel */}
               <section className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-lg font-bold flex items-center gap-2"><Bot className="w-5 h-5 text-cyan-400" /> Agent Testers</h2>
@@ -189,6 +260,7 @@ function DashboardContent() {
                     </div>
                   </motion.div>
                 ))}
+                
                 <div className="mt-6 p-4 bg-black/50 border border-white/10 rounded-xl">
                   <div className="flex items-center gap-2 mb-3 text-xs text-gray-500"><Terminal className="w-3 h-3" /><span>AGENT LOG: {selectedAgent.name.toUpperCase()}</span></div>
                   <div className="space-y-2 text-xs font-mono">
@@ -199,7 +271,6 @@ function DashboardContent() {
                 </div>
               </section>
 
-              {/* Activity Feed */}
               <section>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold flex items-center gap-2"><Activity className="w-5 h-5 text-cyan-400" /> Live Activity</h2>
@@ -214,16 +285,12 @@ function DashboardContent() {
                       className="flex items-start gap-3 p-3 bg-white/[0.02] border border-white/5 rounded-lg"
                     >
                       <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${activity.status === 'success' ? 'bg-green-400' : activity.status === 'warning' ? 'bg-yellow-400' : 'bg-cyan-400'}`} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{activity.message}</p>
-                        <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
-                      </div>
+                      <div className="flex-1 min-w-0"><p className="text-sm truncate">{activity.message}</p><p className="text-xs text-gray-500 mt-1">{activity.time}</p></div>
                     </motion.div>
                   ))}
                 </div>
               </section>
 
-              {/* Strategy Simulator */}
               <section>
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-bold flex items-center gap-2"><Cpu className="w-5 h-5 text-cyan-400" /> Strategy Simulator</h2>
@@ -257,16 +324,12 @@ function DashboardContent() {
                       )}
                     </button>
                     
-                    {!connected && (
-                      <p className="text-xs text-center text-gray-500 mt-2">Connect wallet to simulate</p>
-                    )}
+                    {!connected && <p className="text-xs text-center text-gray-500 mt-2">Connect wallet to simulate</p>}
 
                     {isSimulating && (
                       <div className="mt-4">
                         <div className="flex justify-between text-xs text-gray-500 mb-2"><span>Testing scenarios...</span><span>{simulationProgress}%</span></div>
-                        <div className="h-1 bg-white/10 rounded-full overflow-hidden">
-                          <motion.div className="h-full bg-cyan-400" initial={{ width: 0 }} animate={{ width: `${simulationProgress}%` }} />
-                        </div>
+                        <div className="h-1 bg-white/10 rounded-full overflow-hidden"><motion.div className="h-full bg-cyan-400" initial={{ width: 0 }} animate={{ width: `${simulationProgress}%` }} /></div>
                       </div>
                     )}
 
@@ -281,7 +344,6 @@ function DashboardContent() {
               </section>
             </div>
 
-            {/* Portfolio Allocation */}
             <section className="py-12 border-t border-white/5">
               <div className="flex items-center gap-4 mb-8">
                 <div className="h-px flex-1 bg-gradient-to-r from-cyan-400/50 to-transparent" />
@@ -345,9 +407,7 @@ function DashboardContent() {
                       agent.status === 'running' ? 'bg-green-400/10 text-green-400' :
                       agent.status === 'monitoring' ? 'bg-blue-400/10 text-blue-400' :
                       'bg-yellow-400/10 text-yellow-400'
-                    }`}>
-                      {agent.status.toUpperCase()}
-                    </span>
+                    }`}>{agent.status.toUpperCase()}</span>
                   </div>
                   
                   <div className="space-y-3 text-sm">
@@ -387,7 +447,6 @@ function DashboardContent() {
                       <p className="text-3xl font-bold text-cyan-400">{strategy.apy}%</p>
                       <p className="text-xs text-gray-500">Expected APY</p>
                     </div>
-                    
                     <div className="h-10 w-px bg-white/10" />
                     
                     <div className="text-center">
@@ -418,16 +477,12 @@ function DashboardContent() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="p-6 bg-white/[0.02] border border-white/5 rounded-xl">
                 <h3 className="text-lg font-bold mb-4">Portfolio Performance</h3>
-                <div className="h-64 flex items-center justify-center text-gray-500">
-                  [Chart Placeholder - Connect to API]
-                </div>
+                <div className="h-64 flex items-center justify-center text-gray-500">[Chart Placeholder - Connect to API]</div>
               </div>
 
               <div className="p-6 bg-white/[0.02] border border-white/5 rounded-xl">
                 <h3 className="text-lg font-bold mb-4">Yield Comparison</h3>
-                <div className="h-64 flex items-center justify-center text-gray-500">
-                  [Chart Placeholder - Connect to API]
-                </div>
+                <div className="h-64 flex items-center justify-center text-gray-500">[Chart Placeholder - Connect to API]</div>
               </div>
 
               <div className="p-6 bg-white/[0.02] border border-white/5 rounded-xl md:col-span-2">
@@ -487,24 +542,7 @@ function DashboardContent() {
               </button>
             ))}
             
-            {connected ? (
-              <div className="flex items-center gap-3">
-                <div className="px-4 py-2 bg-white/5 rounded-lg flex items-center gap-2">
-                  <User className="w-4 h-4 text-cyan-400" />
-                  <span className="text-sm">{publicKey}</span>
-                </div>
-                <button onClick={disconnect} className="p-2 hover:bg-white/5 rounded-lg transition-colors">
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={connect}
-                className="px-4 py-2 bg-cyan-400 text-black text-sm font-bold rounded-lg hover:bg-cyan-300 transition-colors"
-              >
-                Connect Wallet
-              </button>
-            )}
+            <WalletButton />
           </div>
 
           <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 hover:bg-white/5 rounded-lg transition-colors">
@@ -541,27 +579,9 @@ function DashboardContent() {
                 </button>
               ))}
               
-              {!connected ? (
-                <button 
-                  onClick={() => {
-                    connect();
-                    setIsMenuOpen(false);
-                  }}
-                  className="py-3 bg-cyan-400 text-black font-bold rounded-lg text-center text-lg"
-                >
-                  Connect Wallet
-                </button>
-              ) : (
-                <button 
-                  onClick={() => {
-                    disconnect();
-                    setIsMenuOpen(false);
-                  }}
-                  className="py-3 bg-red-400/20 text-red-400 font-bold rounded-lg text-center text-lg flex items-center justify-center gap-2"
-                >
-                  <LogOut className="w-5 h-5" /> Disconnect
-                </button>
-              )}
+              <div className="pt-4">
+                <MobileWalletButton onClose={() => setIsMenuOpen(false)} />
+              </div>
             </div>
           </motion.div>
         )}
@@ -600,14 +620,5 @@ function StatCard({ label, value, change, changeType, icon: Icon }: {
       <p className="text-gray-500 text-sm mb-1">{label}</p>
       <p className="text-3xl font-bold">{value}</p>
     </motion.div>
-  );
-}
-
-// Export main component with provider
-export default function Dashboard() {
-  return (
-    <WalletProvider>
-      <DashboardContent />
-    </WalletProvider>
   );
 }
