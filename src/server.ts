@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
-import { TreasuryManager } from './treasury';
-import { SentienceAPI } from './api';
+import { TreasuryManager } from './core/treasury';
+import { SentienceAPI } from './core/api';
 
 export function createAPIServer(treasury: TreasuryManager, api: SentienceAPI) {
   const app = express();
