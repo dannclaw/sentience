@@ -6,6 +6,10 @@ import { PythPriceFeed } from './integrations/pyth';
 import { TreasuryManager, TreasuryConfig } from './core/treasury';
 import { StrategyEngine } from './core/strategy';
 import { RiskManager } from './core/risk';
+import StrategyAuditor from './core/audit';
+import SlotScribeRecorder from './integrations/slotscribe';
+import AgentPayClient from './integrations/agentpay';
+import ClaudeCraftBridge from './integrations/claudecraft';
 
 export class SentienceAgent {
   private rpc: SolanaRPC;
