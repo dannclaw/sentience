@@ -17,10 +17,8 @@ import {
   Bot,
   Menu,
   X,
-  ArrowRight,
   ChevronRight,
-  LogOut,
-  Wallet as WalletIcon
+  LogOut
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -84,8 +82,16 @@ const portfolioData = {
   ]
 };
 
+// Hook to check if component is mounted (prevents hydration issues)
+function useMounted() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  return mounted;
+}
+
 // Wallet Button Component
 function WalletButton() {
+  const mounted = useMounted();
   const { connected, publicKey, disconnect } = useWallet();
   const { connection } = useConnection();
   const [balance, setBalance] = useState<number | null>(null);
@@ -102,6 +108,15 @@ function WalletButton() {
   const formatAddress = (address: string) => {
     return `${address.slice(0, 4)}...${address.slice(-4)}`;
   };
+
+  // Prevent hydration mismatch
+  if (!mounted) {
+    return (
+      <div className="px-6 py-3 bg-cyan-400/20 text-cyan-400 font-bold rounded-xl animate-pulse">
+        Loading...
+      </div>
+    );
+  }
 
   if (!connected) {
     return (
@@ -168,7 +183,10 @@ function WalletButton() {
 
 // Mobile Wallet Button
 function MobileWalletButton({ onClose }: { onClose: () => void }) {
+  const mounted = useMounted();
   const { connected, publicKey, disconnect } = useWallet();
+
+  if (!mounted) return null;
 
   if (!connected) {
     return (
@@ -200,6 +218,7 @@ function MobileWalletButton({ onClose }: { onClose: () => void }) {
 }
 
 export default function Dashboard() {
+  const mounted = useMounted();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState('overview');
   const [selectedAgent, setSelectedAgent] = useState(agentTesters[0]);
@@ -221,6 +240,15 @@ export default function Dashboard() {
       return () => clearInterval(interval);
     }
   }, [isSimulating]);
+
+  // Prevent hydration issues
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+        <div className="text-cyan-400 animate-pulse">Loading Sentience...</div>
+      </div>
+    );
+  }
 
   // Render different sections
   const renderSection = () => {
@@ -320,11 +348,9 @@ export default function Dashboard() {
                       {isSimulating ? (
                         <> <RotateCcw className="w-4 h-4 animate-spin" /> Simulating... </>
                       ) : (
-                        <> <Play className="w-4 h-4" /> Run Simulation </>
+                        <> <Play className="w-4 h-4" /> {connected ? 'Run Simulation' : 'Connect Wallet to Simulate'} </>
                       )}
                     </button>
-                    
-                    {!connected && <p className="text-xs text-center text-gray-500 mt-2">Connect wallet to simulate</p>}
 
                     {isSimulating && (
                       <div className="mt-4">
@@ -461,7 +487,7 @@ export default function Dashboard() {
                     disabled={!connected}
                     className="w-full py-3 bg-cyan-400 text-black font-bold rounded-lg hover:bg-cyan-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {connected ? 'Deploy Strategy' : 'Connect Wallet'}
+                    {connected ? 'Deploy Strategy' : 'Connect Wallet to Deploy'}
                   </button>
                 </motion.div>
               ))}
